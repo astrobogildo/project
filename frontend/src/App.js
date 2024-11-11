@@ -1,47 +1,60 @@
+// src/App.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import TelaInicial from './components/TelaInicial';
+import ConsultaPaciente from './components/ConsultaPaciente';
+import FormularioMedico from './components/FormularioMedico';
+import NavBar from './components/NavBar';
 
 function App() {
-  const [projects, setProjects] = useState([]);
-  const [newProject, setNewProject] = useState({ name: '', description: '' });
+  const [currentPage, setCurrentPage] = useState('inicial');
+  const [pacientes, setPacientes] = useState([]);
+  const [userType, setUserType] = useState(null); // Corrigido para setUser Type
+
+  const buscarPacientes = async () => {
+    try {
+        const response = await axios.get('http://localhost:5000/pacientes');
+        setPacientes(response.data); // Atualiza a lista de pacientes
+    } catch (error) {
+        console.error('Erro ao buscar pacientes:', error);
+    }
+};
 
   useEffect(() => {
-    fetchProjects();
+    buscarPacientes();
   }, []);
 
-  const fetchProjects = async () => {
-    const response = await axios.get('http://localhost:5000/projects');
-    setProjects(response.data);
+  const handleSelectTipo = (tipo) => {
+    setUserType(tipo); // Atualiza o tipo de usuário
+    setCurrentPage(tipo === 'paciente' ? 'consulta' : 'formulario'); // Muda a página com base no tipo
   };
 
-  const handleAddProject = async () => {
-    await axios.post('http://localhost:5000/projects', newProject);
-    setNewProject({ name: '', description: '' });
-    fetchProjects();
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'inicial':
+        return <TelaInicial onSelectTipo={handleSelectTipo} />;
+      case 'consulta':
+        return <ConsultaPaciente userType={userType} />; // Passa userType se necessário
+      case 'formulario':
+        return (
+          <FormularioMedico
+            pacientes={pacientes}
+            setPacientes={setPacientes}
+            buscarPacientes={buscarPacientes}
+            userType={userType} // Passa userType se necessário
+          />
+        );
+      default:
+        return <TelaInicial onSelectTipo={handleSelectTipo} />;
+    }
   };
 
   return (
-    <div>
-      <h1>Lista de Projetos</h1>
-      <ul>
-        {projects.map((project) => (
-          <li key={project._id}>{project.name}: {project.description}</li>
-        ))}
-      </ul>
-      <h2>Adicionar Novo Projeto</h2>
-      <input
-        type="text"
-        placeholder="Nome do Projeto"
-        value={newProject.name}
-        onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-      />
-      <input
-        type="text"
-        placeholder="Descrição do Projeto"
-        value={newProject.description}
-        onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-      />
-      <button onClick={handleAddProject}>Adicionar Projeto</button>
+    <div className="App">
+      <NavBar setCurrentPage={setCurrentPage} />
+      <div className="content">
+        {renderPage()}
+      </div>
     </div>
   );
 }

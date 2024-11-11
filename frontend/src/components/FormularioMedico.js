@@ -7,9 +7,9 @@ function FormularioMedico({ pacientes, setPacientes, buscarPacientes }) {
     idade: '',
     cpf: '',
     telefone: '',
-    sintomas: '',
-    diagnostico: '',
-    medicamentos: []
+    medicamentos: [],
+    sintomas: [],
+    diagnostico: []
   });
 
   const [novoMedicamento, setNovoMedicamento] = useState({
@@ -18,7 +18,13 @@ function FormularioMedico({ pacientes, setPacientes, buscarPacientes }) {
     instrucoes: ''
   });
 
+  const [novoSintoma, setNovoSintoma] = useState('');
+  const [novoDiagnostico, setNovoDiagnostico] = useState('');
+
   const [editandoPaciente, setEditandoPaciente] = useState(null);
+  const [mensagem, setMensagem] = useState('');
+  const [cpfPesquisa, setCpfPesquisa] = useState('');
+  const [pacienteEncontrado, setPacienteEncontrado] = useState(null);
 
   const limparFormulario = () => {
     setNovoPaciente({
@@ -26,16 +32,16 @@ function FormularioMedico({ pacientes, setPacientes, buscarPacientes }) {
       idade: '',
       cpf: '',
       telefone: '',
-      sintomas: '',
-      diagnostico: '',
-      medicamentos: []
+      medicamentos: [],
+      sintomas: [],
+      diagnostico: []
     });
-    setNovoMedicamento({
-      nome: '',
-      dosagem: '',
-      instrucoes: ''
-    });
+    setNovoMedicamento({ nome: '', dosagem: '', instrucoes: '' });
+    setNovoSintoma('');
+    setNovoDiagnostico('');
     setEditandoPaciente(null);
+    setMensagem('');
+    setPacienteEncontrado(null);
   };
 
   const handleMudancaInputPaciente = (e) => {
@@ -71,18 +77,67 @@ function FormularioMedico({ pacientes, setPacientes, buscarPacientes }) {
     }));
   };
 
+  const adicionarSintoma = () => {
+    if (novoSintoma) {
+      setNovoPaciente(prev => ({
+        ...prev,
+        sintomas: [...prev.sintomas, novoSintoma]
+      }));
+      setNovoSintoma('');
+    }
+  };
+
+  const removerSintoma = (index) => {
+    setNovoPaciente(prev => ({
+      ...prev,
+      sintomas: prev.sintomas.filter((_, i) => i !== index)
+    }));
+  };
+
+  const adicionarDiagnostico = () => {
+    if (novoDiagnostico) {
+      setNovoPaciente(prev => ({
+        ...prev,
+        diagnostico: [...prev.diagnostico, novoDiagnostico]
+      }));
+      setNovoDiagnostico('');
+    }
+  };
+
+  const removerDiagnostico = (index) => {
+    setNovoPaciente(prev => ({
+      ...prev,
+      diagnostico: prev.diagnostico.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (editandoPaciente) {
         await axios.put(`http://localhost:5000/pacientes/${editandoPaciente}`, novoPaciente);
+        setMensagem('Paciente atualizado com sucesso!');
       } else {
         await axios.post('http://localhost:5000/pacientes', novoPaciente);
+        setMensagem('Paciente cadastrado com sucesso!');
       }
       await buscarPacientes();
       limparFormulario();
     } catch (error) {
       console.error('Erro ao salvar paciente:', error);
+      setMensagem('Erro ao salvar paciente. Tente novamente.');
+    }
+  };
+
+  const pesquisarPaciente = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/pacientes/cpf/${cpfPesquisa}`);
+      setPacienteEncontrado(response.data);
+      setMensagem('');
+    } catch (error) {
+      console.error('Erro ao buscar paciente:', error);
+      setPacienteEncontrado(null);
+      setMensagem('Paciente não encontrado.');
     }
   };
 
@@ -93,9 +148,9 @@ function FormularioMedico({ pacientes, setPacientes, buscarPacientes }) {
       idade: paciente.idade,
       cpf: paciente.cpf,
       telefone: paciente.telefone,
-      sintomas: paciente.sintomas,
-      diagnostico: paciente.diagnostico,
-      medicamentos: paciente.medicamentos || []
+      medicamentos: paciente.medicamentos,
+      sintomas: Array.isArray(paciente.sintomas) ? paciente.sintomas : [],
+      diagnostico: Array.isArray(paciente.diagnostico) ? paciente.diagnostico : []
     });
   };
 
@@ -107,14 +162,17 @@ function FormularioMedico({ pacientes, setPacientes, buscarPacientes }) {
     try {
       await axios.delete(`http://localhost:5000/pacientes/${id}`);
       await buscarPacientes();
+      setMensagem('Paciente deletado com sucesso!');
     } catch (error) {
       console.error('Erro ao deletar paciente:', error);
+      setMensagem('Erro ao deletar paciente. Tente novamente.');
     }
   };
 
   return (
     <div>
       <h2>{editandoPaciente ? 'Editar Paciente' : 'Cadastrar Novo Paciente'}</h2>
+      {mensagem && <p>{mensagem}</p>}
       <form onSubmit={handleSubmit}>
         <div>
           <input
@@ -157,27 +215,12 @@ function FormularioMedico({ pacientes, setPacientes, buscarPacientes }) {
           />
         </div>
         <div>
-          <textarea
-            name="sintomas"
-            value={novoPaciente.sintomas}
-            onChange={handleMudancaInputPaciente}
-            placeholder="Sintomas"
-            required
-          />
-        </div>
-        <div>
-          <textarea
-            name="diagnostico"
-            value={novoPaciente.diagnostico}
-            onChange={handleMudancaInputPaciente}
-            placeholder="Diagnóstico"
-            required
-          />
-        </div>
-
-        {/* Seção de Medicamentos */}
-        <div>
-          <h3>Adicionar Medicamento</h3>
+          <h4>Medicamentos</h4>
+          {novoPaciente.medicamentos.map((med, index) => (
+            <div key={index}>
+              <p>{med.nome} - {med.dosagem} - {med.instrucoes} <button type="button" onClick={() => removerMedicamento(index)}>Remover</button></p>
+            </div>
+          ))}
           <input
             type="text"
             name="nome"
@@ -199,62 +242,127 @@ function FormularioMedico({ pacientes, setPacientes, buscarPacientes }) {
             onChange={handleMudancaInputMedicamento}
             placeholder="Instruções"
           />
-          <button type="button" onClick={adicionarMedicamento}>
-            Adicionar Medicamento
-          </button>
+          <button type="button" onClick={adicionarMedicamento}>Adicionar Medicamento</button>
         </div>
-
-        {/* Lista de Medicamentos */}
         <div>
-          <h3>Medicamentos Adicionados</h3>
-          <ul>
-            {novoPaciente.medicamentos.map((med, index) => (
-              <li key={index}>
-                {med.nome} - {med.dosagem} - {med.instrucoes}
-                <button type="button" onClick={() => removerMedicamento(index)}>
-                  Remover
-                </button>
-              </li>
-            ))}
-          </ul>
+          <h4>Sintomas</h4>
+          {novoPaciente.sintomas.map((sintoma, index) => (
+            <div key={index}>
+              <p>{sintoma} <button type="button" onClick={() => removerSintoma(index)}>Remover</button></p>
+            </div>
+          ))}
+          <input
+            type="text"
+            value={novoSintoma}
+            onChange={(e) => setNovoSintoma(e.target.value)}
+            placeholder="Adicionar Sintoma"
+          />
+          <button type="button" onClick={adicionarSintoma}>Adicionar Sintoma</button>
         </div>
-
+        <div>
+          <h4>Diagnósticos</h4>
+          {novoPaciente.diagnostico.map((diag, index) => (
+            <div key={index}>
+              <p>{diag} <button type="button" onClick={() => removerDiagnostico(index)}>Remover</button></p>
+            </div>
+          ))}
+          <input
+            type="text"
+            value={novoDiagnostico}
+            onChange={(e) => setNovoDiagnostico(e.target.value)}
+            placeholder="Adicionar Diagnóstico"
+          />
+          <button type="button" onClick={adicionarDiagnostico}>Adicionar Diagnóstico</button>
+        </div>
         <div>
           <button type="submit">
-            {editandoPaciente ? 'Atualizar Paciente' : 'Cadastrar Paciente'}
+            {editandoPaciente ? 'Atualizar Paciente ' : 'Cadastrar Paciente'}
           </button>
-          {editandoPaciente && (
-            <button type="button" onClick={cancelarEdicao}>
-              Cancelar Edição
-            </button>
-          )}
+          {editandoPaciente && <button type="button" onClick={cancelarEdicao}>Cancelar</button>}
         </div>
       </form>
 
+      {/* Barra de Pesquisa */}
+      <div>
+        <h3>Pesquisar Paciente pelo CPF</h3>
+        <input
+          type="text"
+          value={cpfPesquisa}
+          onChange={(e) => setCpfPesquisa(e.target.value)}
+          placeholder="Digite o CPF"
+        />
+        <button onClick={pesquisarPaciente}>Pesquisar</button>
+      </div>
+
+      {/* Detalhes do Paciente Encontrado */}
+      {pacienteEncontrado && (
+        <div>
+          <h3>Detalhes do Paciente</h3>
+          <p><strong>Nome:</strong> {pacienteEncontrado.nome}</p>
+          <p><strong>Idade:</strong> {pacienteEncontrado.idade}</p>
+          <p><strong>CPF:</strong> {pacienteEncontrado.cpf}</p>
+          <p><strong>Telefone:</strong> {pacienteEncontrado.telefone}</p>
+          <h4>Sintomas</h4>
+          <ul>
+            {Array.isArray(pacienteEncontrado.sintomas) ? pacienteEncontrado.sintomas.map((sintoma, index) => (
+              <li key={index}>{sintoma}</li>
+            )) : <li>Nenhum sintoma registrado.</li>}
+          </ul>
+          <h4>Diagnósticos</h4>
+          <ul>
+            {Array.isArray(pacienteEncontrado.diagnostico) ? pacienteEncontrado.diagnostico.map((diag, index) => (
+              <li key={index}>{diag}</li>
+            )) : <li>Nenhum diagnóstico registrado.</li>}
+          </ul>
+          <h4>Medicamentos</h4>
+          <ul>
+            {Array.isArray(pacienteEncontrado.medicamentos) ? pacienteEncontrado.medicamentos.map((med, index) => (
+              <li key={index}>
+                {med.nome} - {med.dosagem} - {med.instrucoes}
+              </li>
+            )) : <li>Nenhum medicamento registrado.</li>}
+          </ul>
+          <button onClick={() => editarPaciente(pacienteEncontrado)}>Editar</button>
+          <button onClick={() => deletarPaciente(pacienteEncontrado._id)}>Deletar</button>
+        </div>
+      )}
+
       {/* Lista de Pacientes */}
       <h2>Lista de Pacientes</h2>
-      <ul>
-        {pacientes.map((paciente) => (
-          <li key={paciente._id}>
-            <strong>Nome:</strong> {paciente.nome}<br />
-            <strong>Idade:</strong> {paciente.idade}<br />
-            <strong>CPF:</strong> {paciente.cpf}<br />
-            <strong>Telefone:</strong> {paciente.telefone}<br />
-            <strong>Sintomas:</strong> {paciente. sintomas}<br />
-            <strong>Diagnóstico:</strong> {paciente.diagnostico}<br />
-            <strong>Medicamentos:</strong>
-            <ul>
-              {paciente.medicamentos.map((med, index) => (
-                <li key={index}>
-                  {med.nome} - {med.dosagem} - {med.instrucoes}
-                </li>
-              ))}
-            </ul>
-            <button onClick={() => editarPaciente(paciente)}>Editar</button>
-            <button onClick={() => deletarPaciente(paciente._id)}>Deletar</button>
-          </li>
-        ))}
-      </ul>
+<ul>
+  {pacientes.length > 0 ? (
+    pacientes.map((paciente) => (
+      <li key={paciente._id}>
+        <strong>Nome:</strong> {paciente.nome}<br />
+        <strong>Idade:</strong> {paciente.idade}<br />
+        <strong>CPF:</strong> {paciente.cpf}<br />
+        <strong>Telefone:</strong> {paciente.telefone}<br />
+        <h4>Sintomas</h4>
+        <ul>
+          {Array.isArray(paciente.sintomas) ? paciente.sintomas.map((sintoma, index) => (
+            <li key={index}>{sintoma}</li>
+          )) : <li>Nenhum sintoma registrado.</li>}
+        </ul>
+        <h4>Diagnósticos</h4>
+        <ul>
+          {Array.isArray(paciente.diagnostico) ? paciente.diagnostico.map((diag, index) => (
+            <li key={index}>{diag}</li>
+          )) : <li>Nenhum diagnóstico registrado.</li>}
+        </ul>
+        <h4>Medicamentos</h4>
+        <ul>
+          {Array.isArray(paciente.medicamentos) ? paciente.medicamentos.map((med, index) => (
+            <li key={index}>
+              {med.nome} - {med.dosagem} - {med.instrucoes}
+            </li>
+          )) : <li>Nenhum medicamento registrado.</li>}
+        </ul>
+        <button onClick={() => editarPaciente(paciente)}>Editar</button>
+        <button onClick={() => deletarPaciente(paciente._id)}>Deletar</button>
+      </li>
+    ))
+  ) : <li>Nenhum paciente cadastrado.</li>}
+</ul>
     </div>
   );
 }

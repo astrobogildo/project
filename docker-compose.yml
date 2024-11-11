@@ -14,6 +14,10 @@ services:
       - "5000:5000"
     depends_on:
       - mongo
+    volumes:
+      - ./backend:/app  # Monta o diretório do backend no contêiner
+    environment:
+      - FLASK_ENV=development  # Define o ambiente como desenvolvimento
 
   frontend:
     build: ./frontend

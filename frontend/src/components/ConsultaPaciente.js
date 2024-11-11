@@ -34,20 +34,45 @@ function ConsultaPaciente() {
       {paciente && (
         <div>
           <h3>Informações do Paciente</h3>
-          <p>Nome: {paciente.nome}</p>
-          <p>Idade: {paciente.idade}</p>
-          <p>CPF: {paciente.cpf}</p>
-          <p>Telefone: {paciente.telefone}</p>
-          <p>Sintomas: {paciente.sintomas}</p>
-          <p>Diagnóstico: {paciente.diagnostico}</p>
+          <p><strong>Nome:</strong> {paciente.nome}</p>
+          <p><strong>Idade:</strong> {paciente.idade}</p>
+          <p><strong>CPF:</strong> {paciente.cpf}</p>
+          <p><strong>Telefone:</strong> {paciente.telefone}</p>
+
+          <h4>Sintomas:</h4>
+          {Array.isArray(paciente.sintomas) && paciente.sintomas.length > 0 ? (
+            <ul>
+              {paciente.sintomas.map((sintoma, index) => (
+                <li key={index}>{sintoma}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>Nenhum sintoma encontrado.</p>
+          )}
+
+          <h4>Diagnóstico:</h4>
+          {Array.isArray(paciente.diagnostico) && paciente.diagnostico.length > 0 ? (
+            <ul>
+              {paciente.diagnostico.map((diag, index) => (
+                <li key={index}>{diag}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>Nenhum diagnóstico encontrado.</p>
+          )}
+
           <h4>Medicamentos:</h4>
-          <ul>
-            {paciente.medicamentos.map((med, index) => (
-              <li key={index}>
-                {med.nome} - Dosagem: {med.dosagem} - Instruções: {med.instrucoes}
-              </li>
-            ))}
-          </ul>
+          {Array.isArray(paciente.medicamentos) && paciente.medicamentos.length > 0 ? (
+            <ul>
+              {paciente.medicamentos.map((med, index) => (
+                <li key={index}>
+                  {med.nome} - Dosagem: {med.dosagem} - Instruções: {med.instrucoes}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Nenhum medicamento encontrado.</p>
+          )}
         </div>
       )}
     </div>
